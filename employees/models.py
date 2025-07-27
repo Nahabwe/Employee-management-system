@@ -131,9 +131,6 @@ class Attendance(models.Model):
     check_in_time=models.TimeField()   
     check_out_time=models.TimeField()
 
-    # @property
-    # def username(self):
-    #     return self.employee.user.username
 
     def __str__(self):
         return f'{self.employee.user.username} {self.date}'

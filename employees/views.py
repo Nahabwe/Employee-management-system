@@ -23,13 +23,16 @@ def employees(request):
 @permission_classes([IsAuthenticated])
 def employee_payslip(request):
     if request.method == 'GET':
-        try:
-            employee = Employee.objects.get(user=request.user)
-            payslips = Payslip.objects.filter(employee=employee).order_by('-month')
-            serializer = PayslipSerializer(payslips, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        except Employee.DoesNotExist:
-            return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
+        if request.user.is_staff:
+            payslip=Payslip.objects.all().order_by('-month')
+        else:
+            try:
+                employee=Employee.objects.get(user=request.user)
+                payslip=Payslip.objects.filter(employee=employee).order_by('-month')
+            except Employee.DoesNotExist:
+                return Response({'error':'Employee not found'},status=status.HTTP_404_NOT_FOUND)
+        serializer=PayslipSerializer(payslip,many=True)
+        return Response(serializer.data,status=status.HTTP_200_OK)
 
     elif request.method == 'POST':
         if not request.user.is_staff:
@@ -204,9 +207,6 @@ def employee_details(request,pk):
         employee.delete()
         return Response({'message': 'Employee deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
          
-
-
-
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def employee_leave_request(request):
@@ -247,3 +247,32 @@ def leave_approval(request,pk):
         serializers=LeaveSerializer(leave)
         return Response(serializers.data, status=status.HTTP_200_OK)
     return Response({'error': 'Method not allowed'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+@api_view(['GET','POST'])
+@permission_classes([IsAuthenticated,IsAdminUser])
+
+def admin_manage_accounts(request):
+    if request.method=='GET':
+        accounts=Account.objects.all()
+        serializers=AccountSerializer(accounts,many=True)
+        return Response(serializers.data,status=status.HTTP_200_OK)
+    elif request.method=='POST':
+        serializers=AccountSerializer(data=request.data)
+        if serializers.is_valid():
+            serializers.save()
+            return Response(serializers.data,status=status.HTTP_201_CREATED)
+        return Response(serializers.errors,status=status.HTTP_400_BAD_REQUEST)
+    
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def employee_account_details(request):
+    try:
+        employee=Employee.objects.get(user=request.user)
+        account=Account.objects.filter(employee=employee)
+        serializers=AccountSerializer(account)
+        return Response(serializers.data,status=status.HTTP_200_OK)
+    except Employee.DoesNotExist:
+        return Response({'error':'Employee not found'},status=status.HTTP_404_NOT_FOUND)
+    except Account.DoesNotExist:
+        return Response({'error':'Account not found'},status=status.HTTP_404_NOT_FOUND)

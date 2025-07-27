@@ -19,5 +19,7 @@ urlpatterns = [
    path('employee-details/<int:pk>/',employee_details,name='employee-details'),
    path('request-leave/',employee_leave_request,name='employee-request-leave'),
    path('leave-approval/<int:pk>/', leave_approval, name='leave-approval'),
+   path('accounts/admin/', admin_manage_accounts, name='admin-manage-accounts'),
+    path('accounts/me/', employee_account_details, name='my-account'),
 
 ]

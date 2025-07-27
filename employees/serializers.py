@@ -2,8 +2,14 @@ from django.contrib.auth.models import User
 from .models import *
 from rest_framework import serializers
 
-
-
+class UsernameRelatedField(serializers.RelatedField):
+    def to_representation(self,value):
+        return value.user.username
+    def to_internal_value(self, data):
+        try:
+            return Employee.objects.get(user__username=data)
+        except Employee.DoesNotExist:
+            raise serializers.ValidationError('Employee with this username does not exist')
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -42,13 +48,15 @@ class LeaveSerializer(serializers.ModelSerializer):
 
 
 class AttendanceSerializer(serializers.ModelSerializer):
-    # employee=serializers.SlugRelatedField(slug_field='username',queryset=Employee.objects.all())
+    employee=UsernameRelatedField(queryset=Employee.objects.all())
     class Meta:
         model=Attendance
         fields='__all__'
 
 
 class PerformanceReviewSerializer(serializers.ModelSerializer):
+    employee=UsernameRelatedField(queryset=Employee.objects.all())
+    reviewer=serializers.SlugRelatedField(slug_field='username',queryset=User.objects.all())
     class Meta:
         model=PerformanceReview
         fields='__all__'
@@ -61,6 +69,7 @@ class DocumentSerializer(serializers.ModelSerializer):
 
 
 class AudtingSerializer(serializers.ModelSerializer):
+    employee=UsernameRelatedField(queryset=Employee.objects.all())
     class Meta:
         model=Audting
         fields='__all__'
@@ -72,8 +81,8 @@ class AnnouncementSerializer(serializers.ModelSerializer):
 
 
 class AccountSerializer(serializers.ModelSerializer):
-    employee_name=serializers.CharField(source='employee.user.username', read_only=True)
-    employee=serializers.SlugRelatedField(slug_field='username',queryset=Employee.objects.all())
+    employee=UsernameRelatedField(queryset=Employee.objects.all())
+    employee_name=serializers.CharField(source='employee.user.username',read_only=True)
     class Meta:
         model=Account
         fields=['id','employee','employee_name','account_number','balance']
@@ -82,9 +91,8 @@ class AccountSerializer(serializers.ModelSerializer):
 
 
 class TransactionSerializer(serializers.ModelSerializer):
-    employee_name = serializers.CharField(source='account.employee.user.username', read_only=True)
-    account=serializers.SlugRelatedField(slug_field='account_number',
-    queryset=Account.objects.all())
+    employee_name=serializers.CharField(source='account.employee.user.username',read_only=True)
+    account=serializers.SlugRelatedField(slug_field='account_number',queryset=Account.objects.all())
 
     class Meta:
         model = Transaction
@@ -93,9 +101,9 @@ class TransactionSerializer(serializers.ModelSerializer):
 
 
 class PayslipSerializer(serializers.ModelSerializer):
+    employee=UsernameRelatedField(queryset=Employee.objects.all())
     net_salary=serializers.SerializerMethodField()
-    employee_name=serializers.CharField(source='employee.user.username', read_only=True)
-    # employee=serializers.SlugRelatedField(slug_field='username',queryset=Employee.objects.all())
+    employee_name=serializers.CharField(source='employee.user.username',read_only=True)
     class Meta:
         model=Payslip
         fields = ['id', 'employee', 'employee_name', 'basic_salary', 'bonus', 'deductions', 'month', 'generated_on', 'net_salary']
